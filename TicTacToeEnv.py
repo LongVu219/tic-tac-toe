@@ -16,12 +16,16 @@ class TicTacToeEnv:
     def get_state(self):
         return str(self.board.tolist())
     
-    def is_valid_move(self, row, col):
-
-        if (0 <= row < self.board_size and 0 <= col < self.board_size and self.board[row][col] == 0):
-            return True
-        
-        return False
+    def print_board(self):
+        for i in range (0, self.board_size):
+            for j in range (0, self.board_size):
+                if (self.board[i, j] == 1):
+                    print('x', end ="")
+                elif (self.board[i, j] == -1):
+                    print('o', end ="")
+                else:
+                    print('.')
+        print("")
     
     def get_valid_moves(self):
         move = []
@@ -31,20 +35,11 @@ class TicTacToeEnv:
                     move.append((i,j))
         return move
     
-    def make_move(self, row, col):
-        if not self.is_valid_move(row, col):
-            return None, -100, True 
-        
-        self.board[row][col] = self.current_player
-        
-        if self.check_win():
-            return self.get_state(), 1, True
-        
-        if len(self.get_valid_moves()) == 0:
-            return self.get_state(), 0, True
-        
+    def apply(self, row, col):
+        self.board[row, col] = self.current_player
         self.current_player *= -1
-        return self.get_state(), 0, False
+
+    
     
     def check_win(self):
         for i in range(self.board_size):
