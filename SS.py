@@ -66,7 +66,7 @@ class TicTacToeEnv:
         if (self.check_win() == True):
             return self.current_player * 100
         
-        return -15
+        return -5
 
 
 class Computer_PLayer():
@@ -85,6 +85,9 @@ class Computer_PLayer():
 
     def choose_action(self, env : TicTacToeEnv, episode = None):
         possible_action = env.valid_moves()
+
+        if (len(possible_action) == 0):
+            return None
 
         if (self.policy == 'random'):
             return random.choice(possible_action)
@@ -117,7 +120,7 @@ class Computer_PLayer():
         if (self.policy == 'optimal'):
             return choose_optimal()
 
-        elif (self.policy == 'epsilon'):
+        elif (self.policy == 'sarsa'):
             rd = np.random.uniform(0, 1)
             eps = self.epsilon * (self.decay_rate**(episode//6000))
             eps = max(eps, 0.1)
@@ -125,11 +128,19 @@ class Computer_PLayer():
                 return random.choice(possible_action)
             else:
                 return choose_optimal()
+        
+        elif (self.policy == 'Q-learning'):
+            rd = np.random.uniform(0, 1)
+            eps = self.epsilon * (self.decay_rate**(episode//6000))
+            if (rd <= eps):
+                return random.choice(possible_action)
+            else:
+                return choose_optimal()
 
 
-cpu1 = Computer_PLayer(policy = "epsilon", epsilon = 0.85, decay_rate = 0.97)    
+cpu1 = Computer_PLayer(policy = "Q-learning", epsilon = 0.85, decay_rate = 0.9)    
 cpu2 = Computer_PLayer(policy = "random")       
-episode = 720000 * 2
+episode = 720000
 alpha = 0.9
 gamma = 0.9
 
@@ -165,6 +176,7 @@ for i in range (episode):
 
         board.apply(action)
         new_state = board.get_state()
+        new_action = None
 
         if (len(board.valid_moves()) > 0):
             new_action = current_cpu.choose_action(board, episode = cur_episode)
@@ -172,9 +184,14 @@ for i in range (episode):
 
         R = board.state_reward()
 
-        cpu1.Q[(state, action)] = cpu1.Q_value(state, action) + alpha * (R + gamma*cpu1.Q_value(new_state, new_action) - cpu1.Q_value(state, action)) 
+        if (cpu1.policy == 'sarsa'):
+            cpu1.Q[(state, action)] = cpu1.Q_value(state, action) + alpha * (R + gamma*cpu1.Q_value(new_state, new_action) - cpu1.Q_value(state, action)) 
+        elif (cpu1.policy == 'Q-learning'):
+            cpu1.policy = 'optimal'
+            optimal_action = cpu1.choose_action(board, episode = cur_episode)
+            cpu1.Q[(state, action)] = cpu1.Q_value(state, action) + alpha * (R + gamma*cpu1.Q_value(new_state, optimal_action) - cpu1.Q_value(state, action)) 
+            cpu1.policy = 'Q-learning'
 
-        #print(action, '-->', new_action)
         state = new_state
         action = new_action
     
@@ -195,9 +212,10 @@ for i in range (episode):
         cpu2_win = 0
         draw = 0
 
+
 import pickle
 
-with open('model/SARSA_4x4.pkl', 'wb') as f:
+with open('model/Q-learning_4x4.pkl', 'wb') as f:
     pickle.dump(cpu1.Q, f)
 
 #with open('model/SARSA.pkl', 'rb') as f:
